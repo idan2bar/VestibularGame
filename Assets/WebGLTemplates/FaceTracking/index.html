@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes">
+    <title>{{{ PRODUCT_NAME }}}</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #231F20;
+        overscroll-behavior: none;
+        touch-action: none;
+      }
+
+      #unity-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      #unity-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        background: #231F20;
+      }
+
+      #unity-loading-bar {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        font-family: sans-serif;
+        color: #ddd;
+      }
+
+      #unity-progress-bar-empty {
+        width: 200px;
+        height: 12px;
+        margin: 8px auto 0;
+        border-radius: 6px;
+        background: #444;
+        overflow: hidden;
+      }
+
+      #unity-progress-bar-full {
+        width: 0%;
+        height: 100%;
+        background: #ddd;
+      }
+
+      /* Camera input for MediaPipe. Kept rendered (opacity 0) when "hidden" so browsers keep decoding frames. */
+      #ft-video {
+        position: fixed;
+        right: 12px;
+        bottom: 12px;
+        width: 160px;
+        height: auto;
+        z-index: 10;
+        transform: scaleX(-1);
+        border-radius: 8px;
+        background: #000;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      #ft-video.ft-visible {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="unity-container">
+      <canvas id="unity-canvas" tabindex="-1"></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo">{{{ PRODUCT_NAME }}}</div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+      </div>
+    </div>
+
+    <video id="ft-video" muted playsinline autoplay></video>
+
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
+      var loadingBar = document.querySelector("#unity-loading-bar");
+      var progressBarFull = document.querySelector("#unity-progress-bar-full");
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/{{{ LOADER_FILENAME }}}";
+      var config = {
+        arguments: [],
+#if PROGRESSIVE_ASSET_LOADING
+        primaryDataUrls: {{{ JSON.stringify(PRIMARY_DATA_FILES) }}},
+        secondaryDataUrls: {{{ JSON.stringify(SECONDARY_DATA_FILES) }}},
+#else
+        dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+#endif
+        frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+#if USE_WASM
+        codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+        symbolsUrl: buildUrl + "/{{{ SYMBOLS_FILENAME }}}",
+#endif
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+        productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+        productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}}
+      };
+
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Lower the render resolution on mobile for performance.
+        config.devicePixelRatio = 1;
+      }
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = function () {
+        createUnityInstance(canvas, config, function (progress) {
+          progressBarFull.style.width = 100 * progress + "%";
+        }).then(function (unityInstance) {
+          window.unityInstance = unityInstance;
+          loadingBar.style.display = "none";
+        }).catch(function (message) {
+          alert(message);
+        });
+      };
+      document.body.appendChild(script);
+    </script>
+
+    <script type="module" src="facetracker.js"></script>
+  </body>
+</html>
