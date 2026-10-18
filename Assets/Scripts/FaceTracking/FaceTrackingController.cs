@@ -14,6 +14,8 @@ namespace VestibularGame.FaceTracking
         [Tooltip("Use the mouse-driven mock tracker even in WebGL player builds.")]
         [SerializeField] bool forceMock;
         [SerializeField] bool autoStart = true;
+        [SerializeField] int requestedCameraWidth = 1280;
+        [SerializeField] int requestedCameraHeight = 720;
 
         IFaceTracker tracker;
         GazeEstimator estimator;
@@ -22,6 +24,7 @@ namespace VestibularGame.FaceTracking
         bool isMock;
         bool previewSet;
         bool previewVisible;
+        bool fullCalibrationPending;
         float fps;
         float lastFrameTime = -1f;
 
@@ -40,6 +43,9 @@ namespace VestibularGame.FaceTracking
         /// <summary>Smoothed rate of new tracker frames in Hz (0 if none arrived in the last second).</summary>
         public float TrackingFps => lastFrameTime >= 0f && Time.unscaledTime - lastFrameTime <= 1f ? fps : 0f;
 
+        /// <summary>Camera size requested from the browser on WebGL (ideal, not guaranteed).</summary>
+        public Vector2Int RequestedCameraSize => new Vector2Int(requestedCameraWidth, requestedCameraHeight);
+
         void Awake() => EnsureInitialized();
 
         void Start()
@@ -57,7 +63,7 @@ namespace VestibularGame.FaceTracking
 
 #if UNITY_WEBGL && !UNITY_EDITOR
             isMock = forceMock;
-            tracker = forceMock ? (IFaceTracker)new MockFaceTracker() : new WebGLFaceTracker();
+            tracker = forceMock ? (IFaceTracker)new MockFaceTracker() : new WebGLFaceTracker(requestedCameraWidth, requestedCameraHeight);
 #else
             isMock = true;
             tracker = new MockFaceTracker();
@@ -67,6 +73,13 @@ namespace VestibularGame.FaceTracking
         void Update()
         {
             EnsureInitialized();
+
+            if (fullCalibrationPending && !estimator.IsCalibrating)
+            {
+                fullCalibrationPending = false;
+                if (estimator.IsCalibrated) estimator.BeginHeadCalibration();
+            }
+
             if (!tracker.TryGetLatest(latestFrame)) return;
 
             float now = Time.unscaledTime;
@@ -98,6 +111,8 @@ namespace VestibularGame.FaceTracking
             EnsureInitialized();
             tracker.Stop();
             estimator.CancelCalibration();
+            estimator.CancelHeadCalibration();
+            fullCalibrationPending = false;
             latestFrame.HasFace = false;
             latestSample = default;
             fps = 0f;
@@ -108,6 +123,30 @@ namespace VestibularGame.FaceTracking
         {
             EnsureInitialized();
             estimator.BeginCalibration();
+        }
+
+        /// <summary>Cancels any running centre or head calibration, including a pending full calibration.</summary>
+        public void CancelCalibration()
+        {
+            EnsureInitialized();
+            fullCalibrationPending = false;
+            estimator.CancelCalibration();
+            estimator.CancelHeadCalibration();
+        }
+
+        /// <summary>Starts the head-movement calibration (the centre calibration should be done first).</summary>
+        public void BeginHeadCalibration()
+        {
+            EnsureInitialized();
+            estimator.BeginHeadCalibration();
+        }
+
+        /// <summary>Starts the centre calibration, then the head-movement calibration once the centre one has succeeded.</summary>
+        public void CalibrateFull()
+        {
+            EnsureInitialized();
+            estimator.BeginCalibration();
+            fullCalibrationPending = true;
         }
 
         public void SetPreviewVisible(bool visible)

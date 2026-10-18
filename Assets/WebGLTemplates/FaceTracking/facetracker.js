@@ -244,7 +244,7 @@ function waitForPlayback() {
   });
 }
 
-async function doStart(mySession) {
+async function doStart(mySession, width, height) {
   if (!window.isSecureContext) {
     throw new Error("Camera access requires a secure context (HTTPS or localhost).");
   }
@@ -259,13 +259,24 @@ async function doStart(mySession) {
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+      video: {
+        facingMode: "user",
+        width: { ideal: width },
+        height: { ideal: height },
+        frameRate: { ideal: 30 },
+      },
       audio: false,
     });
   } catch (e) {
     throw new Error(describeCameraError(e));
   }
   if (mySession !== session) { stopStream(); return; }
+
+  const videoTrack = stream.getVideoTracks()[0];
+  if (videoTrack) {
+    const settings = videoTrack.getSettings();
+    console.log(`FaceTracker: camera running at ${settings.width}x${settings.height} (requested ${width}x${height}).`);
+  }
 
   video.srcObject = stream;
   try {
@@ -291,14 +302,14 @@ const bridge = {
   frameId: 0,
   latest: new Float32Array(BUFFER_LENGTH),
 
-  start() {
+  start(width = 1280, height = 720) {
     if (startPromise) return startPromise;
     if (bridge.status === STATUS_RUNNING) return Promise.resolve();
 
     const mySession = ++session;
     bridge.error = "";
     bridge.status = STATUS_STARTING;
-    const promise = doStart(mySession)
+    const promise = doStart(mySession, width, height)
       .catch((e) => {
         if (mySession !== session) return;
         console.error("FaceTracker: start failed.", e);

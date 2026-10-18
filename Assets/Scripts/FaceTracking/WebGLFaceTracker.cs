@@ -9,7 +9,7 @@ namespace VestibularGame.FaceTracking
     public sealed class WebGLFaceTracker : IFaceTracker
     {
 #if UNITY_WEBGL && !UNITY_EDITOR
-        [DllImport("__Internal")] private static extern void FaceTracker_Start();
+        [DllImport("__Internal")] private static extern void FaceTracker_Start(int width, int height);
         [DllImport("__Internal")] private static extern void FaceTracker_Stop();
         [DllImport("__Internal")] private static extern int FaceTracker_GetStatus();
         [DllImport("__Internal")] private static extern void FaceTracker_SetPreviewVisible(int visible);
@@ -18,7 +18,19 @@ namespace VestibularGame.FaceTracking
 
         private readonly float[] _buffer = new float[FaceBufferLayout.Length];
         private int _lastFrameId = -1;
+        private readonly int _requestedWidth;
+        private readonly int _requestedHeight;
 #endif
+
+        /// <param name="requestedWidth">Camera width requested from the browser (ideal, not guaranteed).</param>
+        /// <param name="requestedHeight">Camera height requested from the browser (ideal, not guaranteed).</param>
+        public WebGLFaceTracker(int requestedWidth = 1280, int requestedHeight = 720)
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            _requestedWidth = requestedWidth;
+            _requestedHeight = requestedHeight;
+#endif
+        }
 
         public FaceTrackerStatus Status
         {
@@ -52,7 +64,7 @@ namespace VestibularGame.FaceTracking
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
             _lastFrameId = -1;
-            FaceTracker_Start();
+            FaceTracker_Start(_requestedWidth, _requestedHeight);
 #endif
         }
 

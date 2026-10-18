@@ -5,10 +5,13 @@ namespace VestibularGame.FaceTracking
 {
     /// <summary>
     /// Mouse- and keyboard-driven stand-in for the webcam face tracker, for testing gaze features in the Editor.
+    /// Landmarks come from the same forward 3D model the gaze estimator inverts (see <see cref="EyeModel"/>):
+    /// the face is rigidly rotated by the head pose, each eyeball centre sits behind its eye-corner midpoint,
+    /// and each iris lies on its eyeball along the gaze direction.
     /// Controls:
     /// <list type="bullet">
-    /// <item>Mouse position, relative to screen center, drives the eyes (looking right or up moves the irises the same way).</item>
-    /// <item>Hold right mouse button or Left Shift: the mouse drives the head instead (yaw up to ±30°, pitch up to ±20°) and the eyes stay centered.</item>
+    /// <item>Mouse position, relative to screen center, drives the eyes inside the head (yaw up to ±30°, pitch up to ±20°). Looking right or up moves the irises the same way.</item>
+    /// <item>Hold right mouse button or Left Shift: the mouse drives the head instead (yaw up to ±30°, pitch up to ±20°) and the eyes keep fixating the camera.</item>
     /// <item>Hold Space: both eyes blink.</item>
     /// <item>H: toggles face detected / face lost.</item>
     /// </list>
@@ -17,19 +20,25 @@ namespace VestibularGame.FaceTracking
     {
         const float HeadYawMaxDeg = 30f;
         const float HeadPitchMaxDeg = 20f;
-        const float FaceShiftX = 0.08f;
-        const float FaceShiftY = 0.08f;
-        const float EyeWidth = 0.06f;
-        const float EyeSpacingX = 0.08f;
-        const float EyeOffsetY = -0.05f;
-        const float LidOffsetY = 0.012f;
-        const float IrisRangeX = 0.25f;
-        const float IrisRangeY = 0.15f;
-        const float IrisRadius = 0.2f * EyeWidth;
-        const float OutlineRadiusX = 0.14f;
-        const float OutlineRadiusY = 0.19f;
+        const float EyeYawMaxDeg = 30f;
+        const float EyePitchMaxDeg = 20f;
         const int ImageWidthPx = 640;
         const int ImageHeightPx = 480;
+
+        // Face geometry in head space, in pixels. A point is center + right*a + up*b + forward*c,
+        // where forward points out of the face (toward the camera when frontal).
+        const float EyeWidth = 0.06f * ImageWidthPx;      // w
+        const float EyeSpacing = 0.08f * ImageWidthPx;    // eye centres at ±EyeSpacing along right
+        const float EyeHeight = 0.05f * ImageWidthPx;     // eye centres EyeHeight above the face centre along up
+        const float LidOffset = 0.15f * EyeWidth;         // upper/lower lids at ±LidOffset along up (collapsed while blinking)
+        const float IrisContourRadius = 0.12f * EyeWidth;
+        const float OutlineRadiusX = 0.14f * ImageWidthPx;
+        const float OutlineRadiusY = 0.19f * ImageHeightPx;
+        const float NoseDrop = 0.03f * ImageHeightPx;
+        const float NoseForward = 0.6f * EyeWidth;
+        const float ChinDrop = 0.15f * ImageHeightPx;
+        const float ChinForward = 0.2f * EyeWidth;
+        const float ForeheadRise = 0.15f * ImageHeightPx;
 
         int _frameId;
         int _lastToggleFrame = -1;
@@ -75,26 +84,31 @@ namespace VestibularGame.FaceTracking
                 }
             }
 
-            float yawDeg = 0f, pitchDeg = 0f;
-            float eyeGx = gx, eyeGy = gy;
+            // Head mode: the mouse turns the head and the eyes keep fixating the camera.
+            // Eye mode: the head stays still and the mouse rotates the eyes inside it.
+            float headYawDeg = 0f, headPitchDeg = 0f;
+            float eyeYawDeg = 0f, eyePitchDeg = 0f;
             if (headMode)
             {
-                yawDeg = gx * HeadYawMaxDeg;
-                pitchDeg = gy * HeadPitchMaxDeg;
-                eyeGx = 0f;
-                eyeGy = 0f;
+                headYawDeg = gx * HeadYawMaxDeg;
+                headPitchDeg = gy * HeadPitchMaxDeg;
+            }
+            else
+            {
+                eyeYawDeg = gx * EyeYawMaxDeg;
+                eyePitchDeg = gy * EyePitchMaxDeg;
             }
 
-            // Turning the head shifts the whole face: turning right (+yaw) moves it toward image left.
-            float cx = 0.5f - Mathf.Sin(yawDeg * Mathf.Deg2Rad) * FaceShiftX;
-            float cy = 0.5f - Mathf.Sin(pitchDeg * Mathf.Deg2Rad) * FaceShiftY;
+            Matrix4x4 facial = HeadPoseMath.ToMatrix(headYawDeg, headPitchDeg, 0f);
+            facial.m23 = -50f; // face 50 cm in front of the camera (MediaPipe camera space: face at negative z)
+            EyeModel.HeadAxes(facial, out Vector3 axisRight, out Vector3 axisUp, out Vector3 axisFwd);
 
             frame.FrameId = ++_frameId;
             frame.TimestampMs = Time.realtimeSinceStartupAsDouble * 1000.0;
             frame.ImageWidth = ImageWidthPx;
             frame.ImageHeight = ImageHeightPx;
             frame.HasFace = _hasFace;
-            frame.FacialTransform = HeadPoseMath.ToMatrix(yawDeg, pitchDeg, 0f);
+            frame.FacialTransform = facial;
 
             float[] bs = frame.Blendshapes;
             for (int i = 0; i < FaceFrame.BlendshapeCount; i++) bs[i] = 0f;
@@ -104,56 +118,86 @@ namespace VestibularGame.FaceTracking
                 bs[BlendshapeIndex.EyeBlinkRight] = 1f;
             }
 
+            // The face centre sits at the image centre; every landmark is a head-space offset projected through the head axes.
+            Vector3 origin = new Vector3(ImageWidthPx * 0.5f, ImageHeightPx * 0.5f, 0f);
             Vector3[] lm = frame.Landmarks;
 
-            // Default: an outline ellipse around the face center, spread by index.
+            // Default: an outline ellipse on the face plane, spread by index.
             for (int i = 0; i < FaceFrame.LandmarkCount; i++)
             {
                 float t = i * (Mathf.PI * 2f / FaceFrame.LandmarkCount);
-                lm[i] = new Vector3(cx + OutlineRadiusX * Mathf.Cos(t), cy + OutlineRadiusY * Mathf.Sin(t), 0f);
+                SetLandmark(lm, i, HeadPoint(origin, axisRight, axisUp, axisFwd,
+                    OutlineRadiusX * Mathf.Cos(t), OutlineRadiusY * Mathf.Sin(t), 0f));
             }
 
-            lm[FaceLandmarkIndex.NoseTip] = new Vector3(cx, cy + 0.03f, 0f);
-            lm[FaceLandmarkIndex.Chin] = new Vector3(cx, cy + 0.15f, 0f);
-            lm[FaceLandmarkIndex.Forehead] = new Vector3(cx, cy - 0.15f, 0f);
+            SetLandmark(lm, FaceLandmarkIndex.NoseTip,
+                HeadPoint(origin, axisRight, axisUp, axisFwd, 0f, -NoseDrop, NoseForward));
+            SetLandmark(lm, FaceLandmarkIndex.Chin,
+                HeadPoint(origin, axisRight, axisUp, axisFwd, 0f, -ChinDrop, ChinForward));
+            SetLandmark(lm, FaceLandmarkIndex.Forehead,
+                HeadPoint(origin, axisRight, axisUp, axisFwd, 0f, ForeheadRise, 0f));
 
             // Eye A is on the image left (subject's right eye), eye B on the image right (subject's left eye).
-            float eyeY = cy + EyeOffsetY;
-            float eyeAx = cx - EyeSpacingX;
-            float eyeBx = cx + EyeSpacingX;
-            float lid = blinking ? 0f : LidOffsetY;
+            Vector3 eyeACentre = HeadPoint(origin, axisRight, axisUp, axisFwd, -EyeSpacing, EyeHeight, 0f);
+            Vector3 eyeBCentre = HeadPoint(origin, axisRight, axisUp, axisFwd, EyeSpacing, EyeHeight, 0f);
+            float lid = blinking ? 0f : LidOffset;
 
             WriteEye(lm, FaceLandmarkIndex.EyeAOuter, FaceLandmarkIndex.EyeAInner,
-                FaceLandmarkIndex.EyeAUpper, FaceLandmarkIndex.EyeALower, eyeAx, eyeY, EyeWidth, lid);
+                FaceLandmarkIndex.EyeAUpper, FaceLandmarkIndex.EyeALower, eyeACentre, axisRight, axisUp, lid);
             WriteEye(lm, FaceLandmarkIndex.EyeBInner, FaceLandmarkIndex.EyeBOuter,
-                FaceLandmarkIndex.EyeBUpper, FaceLandmarkIndex.EyeBLower, eyeBx, eyeY, EyeWidth, lid);
+                FaceLandmarkIndex.EyeBUpper, FaceLandmarkIndex.EyeBLower, eyeBCentre, axisRight, axisUp, lid);
 
-            // Iris offset: looking right (+gx) moves the iris toward image left; looking up (+gy) moves it up.
-            float irisDx = -eyeGx * IrisRangeX * EyeWidth;
-            float irisDy = -eyeGy * IrisRangeY * EyeWidth;
-            WriteIris(lm, FaceLandmarkIndex.IrisCenter1, eyeAx + irisDx, eyeY + irisDy);
-            WriteIris(lm, FaceLandmarkIndex.IrisCenter2, eyeBx + irisDx, eyeY + irisDy);
+            // Gaze in image space. Eye mode: the eyes rotate inside the head. Head mode: both eyes look at the
+            // camera lens (perfect VOR), from the cyclopean eye pixel back toward the origin; one shared direction for both eyes.
+            Vector3 gaze;
+            if (headMode)
+            {
+                Vector3 cyclopeanPx = 0.5f * (eyeACentre + eyeBCentre);
+                Vector3 eyeCm = EyeModel.BackProjectCm(cyclopeanPx.x, cyclopeanPx.y, ImageWidthPx, ImageHeightPx, 50f,
+                    EyeModel.FocalLengthPx(ImageHeightPx, EyeModel.DefaultCameraVerticalFovDeg));
+                gaze = (-eyeCm).normalized;
+            }
+            else
+            {
+                gaze = EyeModel.DirectionFromHeadAngles(eyeYawDeg, eyePitchDeg, axisRight, axisUp, axisFwd);
+            }
+
+            WriteIris(lm, FaceLandmarkIndex.IrisCenter1, eyeACentre, gaze, axisRight, axisUp, axisFwd);
+            WriteIris(lm, FaceLandmarkIndex.IrisCenter2, eyeBCentre, gaze, axisRight, axisUp, axisFwd);
 
             return true;
         }
 
+        // Head-space point in image pixels: origin + right*a + up*b + forward*c.
+        static Vector3 HeadPoint(Vector3 origin, Vector3 right, Vector3 up, Vector3 fwd, float a, float b, float c) =>
+            origin + right * a + up * b + fwd * c;
+
+        // Stores an image-pixel point as a normalized landmark (x/W, y/H, z/W).
+        static void SetLandmark(Vector3[] lm, int index, Vector3 imagePx) =>
+            lm[index] = EyeModel.ToNormalized(imagePx, ImageWidthPx, ImageHeightPx);
+
         static void WriteEye(Vector3[] lm, int leftIdx, int rightIdx, int upperIdx, int lowerIdx,
-            float ecx, float ecy, float width, float lid)
+            Vector3 centre, Vector3 right, Vector3 up, float lid)
         {
-            float halfW = width * 0.5f;
-            lm[leftIdx] = new Vector3(ecx - halfW, ecy, 0f);
-            lm[rightIdx] = new Vector3(ecx + halfW, ecy, 0f);
-            lm[upperIdx] = new Vector3(ecx, ecy - lid, 0f);
-            lm[lowerIdx] = new Vector3(ecx, ecy + lid, 0f);
+            Vector3 halfWidth = right * (EyeWidth * 0.5f);
+            SetLandmark(lm, leftIdx, centre - halfWidth);
+            SetLandmark(lm, rightIdx, centre + halfWidth);
+            SetLandmark(lm, upperIdx, centre + up * lid);
+            SetLandmark(lm, lowerIdx, centre - up * lid);
         }
 
-        static void WriteIris(Vector3[] lm, int centerIdx, float ix, float iy)
+        static void WriteIris(Vector3[] lm, int centerIdx, Vector3 eyeCentre, Vector3 gaze,
+            Vector3 right, Vector3 up, Vector3 fwd)
         {
-            lm[centerIdx] = new Vector3(ix, iy, 0f);
-            lm[centerIdx + 1] = new Vector3(ix + IrisRadius, iy, 0f);
-            lm[centerIdx + 2] = new Vector3(ix, iy + IrisRadius, 0f);
-            lm[centerIdx + 3] = new Vector3(ix - IrisRadius, iy, 0f);
-            lm[centerIdx + 4] = new Vector3(ix, iy - IrisRadius, 0f);
+            // The eyeball centre sits behind the eye-corner midpoint; the iris sits on the eyeball along the gaze.
+            Vector3 eyeball = eyeCentre - fwd * (EyeModel.DefaultEyeballCenterDepth * EyeWidth);
+            Vector3 iris = eyeball + gaze * (EyeModel.DefaultIrisSphereRadius * EyeWidth);
+
+            SetLandmark(lm, centerIdx, iris);
+            SetLandmark(lm, centerIdx + 1, iris + right * IrisContourRadius);
+            SetLandmark(lm, centerIdx + 2, iris + up * IrisContourRadius);
+            SetLandmark(lm, centerIdx + 3, iris - right * IrisContourRadius);
+            SetLandmark(lm, centerIdx + 4, iris - up * IrisContourRadius);
         }
     }
 }

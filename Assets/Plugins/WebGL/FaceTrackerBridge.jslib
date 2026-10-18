@@ -1,8 +1,8 @@
 // Thin wrappers over window.FaceTrackerBridge (see WebGLTemplates/FaceTracking/facetracker.js).
 mergeInto(LibraryManager.library, {
-  FaceTracker_Start: function () {
+  FaceTracker_Start: function (width, height) {
     var b = window.FaceTrackerBridge;
-    if (b) b.start();
+    if (b) b.start(width, height);
   },
 
   FaceTracker_Stop: function () {

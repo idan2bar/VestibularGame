@@ -22,6 +22,7 @@ namespace VestibularGame.FaceTracking.DebugUI
         const float CenterDotSize = 40f;
         const float CursorSize = 36f;
         const float TextInterval = 0.1f;
+        const float ResultDisplaySeconds = 5f;
         const string MockHint = "Mock: mouse = eyes | RMB or Shift + mouse = head | Space = blink | H = toggle face";
 
         [SerializeField] FaceTrackingController controller;
@@ -47,12 +48,20 @@ namespace VestibularGame.FaceTracking.DebugUI
         Text statusLabel;
         Text readout;
         Text hintLabel;
-        Button startButton, calibrateButton, previewButton;
-        Text startText, calibrateText, previewText;
+        Text promptLabel;
+        Button startButton, calibrateButton, headCalButton, previewButton;
+        Text startText, calibrateText, headCalText, previewText;
+
+        ScatterPlotGraphic scatterPlot;
+        Text fitLabel;
 
         readonly StringBuilder sb = new StringBuilder(512);
+        readonly StringBuilder fitSb = new StringBuilder(128);
+        readonly StringBuilder promptSb = new StringBuilder(160);
         float nextTextTime;
-        int lastCalibPercent = -1;
+        HeadCalibrationState lastHeadState;
+        HeadCalibrationState resultState;
+        float resultUntil = -1f;
 
         /// <summary>Assigns the controller to visualize (before Awake, or at runtime).</summary>
         public void SetController(FaceTrackingController value)
@@ -100,6 +109,12 @@ namespace VestibularGame.FaceTracking.DebugUI
 
         void OnSample(GazeSample s)
         {
+            if (s.HasFace && !s.IsBlinking)
+            {
+                scatterPlot.AddPoint(0, s.HeadYaw, s.GazeYaw);
+                scatterPlot.AddPoint(1, s.HeadPitch, s.GazePitch);
+            }
+
             if (!s.HasFace) return;
             System.Array.Copy(controller.LatestFrame.Landmarks, landmarkSnapshot, FaceFrame.LandmarkCount);
             haveSnapshot = true;
@@ -115,10 +130,11 @@ namespace VestibularGame.FaceTracking.DebugUI
             var s = controller.LatestSample;
             bool running = tracker.Status == FaceTrackerStatus.Running;
             bool hasFace = running && s.HasFace;
-            bool calibrating = estimator.IsCalibrating;
+            bool calibrating = estimator.IsCalibrating || estimator.IsHeadCalibrating;
 
             landmarkGraphic.color = hasFace ? Color.white : new Color(0.5f, 0.5f, 0.5f, haveSnapshot ? 0.35f : 0f);
 
+            TrackHeadCalibrationResult(estimator);
             UpdateCursor(s, hasFace);
             UpdateCenterDot(calibrating);
             UpdateStatus(s, hasFace, calibrating);
@@ -126,9 +142,80 @@ namespace VestibularGame.FaceTracking.DebugUI
             if (Time.unscaledTime >= nextTextTime)
             {
                 nextTextTime = Time.unscaledTime + TextInterval;
-                UpdateReadout(tracker, s);
+                UpdateReadout(tracker, estimator, s);
+                UpdateFitLabel();
+                UpdatePrompt(estimator);
                 UpdateButtons(tracker, estimator, running, calibrating);
             }
+        }
+
+        /// <summary>Detects the end of a head calibration to show its result for a few seconds and refresh the plot.</summary>
+        void TrackHeadCalibrationResult(GazeEstimator estimator)
+        {
+            var state = estimator.HeadCalibrationState;
+            if (lastHeadState == HeadCalibrationState.Collecting && state != HeadCalibrationState.Collecting
+                && state != HeadCalibrationState.None)
+            {
+                resultState = state;
+                resultUntil = Time.unscaledTime + ResultDisplaySeconds;
+                if (state == HeadCalibrationState.Succeeded) scatterPlot.Clear(); // show the post-calibration result
+            }
+            if (state == HeadCalibrationState.Collecting) resultUntil = -1f;
+            lastHeadState = state;
+        }
+
+        void UpdatePrompt(GazeEstimator estimator)
+        {
+            promptSb.Clear();
+            Color color = ColorWarn;
+            if (estimator.IsCalibrating)
+            {
+                int pct = Mathf.RoundToInt(Mathf.Clamp01(estimator.CalibrationProgress) * 100f);
+                promptSb.Append("Look at the dot and hold still… ").Append(pct).Append('%');
+            }
+            else if (estimator.IsHeadCalibrating)
+            {
+                float progress = Mathf.Clamp01(estimator.HeadCalibrationProgress);
+                var cfg = estimator.Settings;
+                float yawW = RangeWidth(estimator.HeadCalibrationYawRange);
+                float pitchW = RangeWidth(estimator.HeadCalibrationPitchRange);
+                promptSb.Append(progress < 0.5f
+                    ? "Keep looking at the dot — slowly turn your head LEFT and RIGHT"
+                    : "Keep looking at the dot — slowly nod UP and DOWN");
+                promptSb.Append("\nYaw ").Append(Mathf.FloorToInt(yawW)).Append('/').Append(Mathf.RoundToInt(cfg.HeadCalibrationMinYawRangeDeg))
+                    .Append("° ").Append(yawW >= cfg.HeadCalibrationMinYawRangeDeg ? "ok" : "more")
+                    .Append(" · Pitch ").Append(Mathf.FloorToInt(pitchW)).Append('/').Append(Mathf.RoundToInt(cfg.HeadCalibrationMinPitchRangeDeg))
+                    .Append("° ").Append(pitchW >= cfg.HeadCalibrationMinPitchRangeDeg ? "ok" : "more")
+                    .Append(" · ").Append(Mathf.RoundToInt(progress * 100f)).Append('%');
+            }
+            else if (Time.unscaledTime < resultUntil)
+            {
+                switch (resultState)
+                {
+                    case HeadCalibrationState.Succeeded:
+                        promptSb.Append("Head calibration OK — residual ")
+                            .Append(estimator.HeadCalibrationRmsDeg.ToString("F1", CultureInfo.InvariantCulture)).Append("° RMS");
+                        color = ColorOn;
+                        break;
+                    case HeadCalibrationState.InsufficientMotion:
+                        promptSb.Append("Not enough head movement — press Calibrate to retry");
+                        color = ColorWarn;
+                        break;
+                    default:
+                        promptSb.Append("Head calibration failed — press Calibrate to retry");
+                        color = ColorOff;
+                        break;
+                }
+            }
+
+            promptLabel.text = promptSb.ToString();
+            promptLabel.color = color;
+        }
+
+        static float RangeWidth(Vector2 range)
+        {
+            float w = range.y - range.x;
+            return float.IsNaN(w) || w < 0f ? 0f : w;
         }
 
         void UpdateCursor(GazeSample s, bool hasFace)
@@ -167,7 +254,7 @@ namespace VestibularGame.FaceTracking.DebugUI
             statusLabel.color = color;
         }
 
-        void UpdateReadout(IFaceTracker tracker, GazeSample s)
+        void UpdateReadout(IFaceTracker tracker, GazeEstimator estimator, GazeSample s)
         {
             sb.Clear();
             sb.Append("Backend: ").Append(controller.IsMock ? "Mock" : "WebGL").Append('\n');
@@ -175,14 +262,77 @@ namespace VestibularGame.FaceTracking.DebugUI
             if (!string.IsNullOrEmpty(tracker.ErrorMessage)) sb.Append(" - ").Append(tracker.ErrorMessage);
             sb.Append('\n');
             sb.Append("FPS: "); AppendF1(controller.TrackingFps); sb.Append('\n');
+            var frame = controller.LatestFrame;
+            sb.Append("Camera: ");
+            if (frame.ImageWidth > 0 && frame.ImageHeight > 0) sb.Append(frame.ImageWidth).Append('x').Append(frame.ImageHeight);
+            else sb.Append('—');
+            sb.Append('\n');
             sb.Append("Head Y/P/R: "); AppendF1(s.HeadYaw); sb.Append(" / "); AppendF1(s.HeadPitch); sb.Append(" / "); AppendF1(s.HeadRoll); sb.Append('\n');
             sb.Append("Eye Y/P: "); AppendF1(s.EyeYaw); sb.Append(" / "); AppendF1(s.EyePitch); sb.Append('\n');
             sb.Append("Gaze Y/P: "); AppendF1(s.GazeYaw); sb.Append(" / "); AppendF1(s.GazePitch); sb.Append('\n');
-            sb.Append("Deviation: "); AppendF1(s.DeviationDeg); sb.Append(" deg");
+            sb.Append("Deviation: "); AppendF1(s.DeviationDeg); sb.Append(" deg\n");
+            sb.Append("Centre cal: ").Append(estimator.IsCalibrating ? "calibrating" : estimator.IsCalibrated ? "done" : "none").Append('\n');
+            sb.Append("Head cal: ");
+            switch (estimator.HeadCalibrationState)
+            {
+                case HeadCalibrationState.Succeeded:
+                    sb.Append("OK "); AppendF1(estimator.HeadCalibrationRmsDeg); sb.Append("° rms");
+                    break;
+                case HeadCalibrationState.Collecting:
+                    sb.Append("collecting ").Append(Mathf.RoundToInt(Mathf.Clamp01(estimator.HeadCalibrationProgress) * 100f)).Append('%');
+                    break;
+                case HeadCalibrationState.InsufficientMotion:
+                    sb.Append("need more motion");
+                    break;
+                case HeadCalibrationState.Failed:
+                    sb.Append("failed");
+                    break;
+                default:
+                    sb.Append("none");
+                    break;
+            }
             readout.text = sb.ToString();
         }
 
         void AppendF1(float v) => sb.Append(v.ToString("F1", CultureInfo.InvariantCulture));
+
+        void UpdateFitLabel()
+        {
+            fitSb.Clear();
+            AppendFit("Yaw", 0);
+            fitSb.Append('\n');
+            AppendFit("Pitch", 1);
+            fitLabel.text = fitSb.ToString();
+        }
+
+        /// <summary>
+        /// RMS of the gaze error over the series (how far it is from 0) and the least-squares drift slope of the error vs. head angle.
+        /// </summary>
+        void AppendFit(string name, int series)
+        {
+            fitSb.Append(name);
+            if (!scatterPlot.TryGetStats(series, out float rms, out int count) || count < ScatterPlotGraphic.MinFitCount)
+            {
+                fitSb.Append(" — (turn head)");
+                return;
+            }
+
+            fitSb.Append(" err RMS ").Append(rms.ToString("F1", CultureInfo.InvariantCulture)).Append('°');
+            if (scatterPlot.TryGetFit(series, out float drift, out _, out _))
+            {
+                fitSb.Append(" · drift ").Append(drift.ToString("+0.00;-0.00;+0.00", CultureInfo.InvariantCulture))
+                    .Append("/° (n ").Append(count).Append(')');
+            }
+            else
+            {
+                fitSb.Append(" (turn head)");
+            }
+        }
+
+        void OnClearPlotClicked()
+        {
+            scatterPlot.Clear();
+        }
 
         void UpdateButtons(IFaceTracker tracker, GazeEstimator estimator, bool running, bool calibrating)
         {
@@ -190,21 +340,10 @@ namespace VestibularGame.FaceTracking.DebugUI
             startText.text = st == FaceTrackerStatus.Running || st == FaceTrackerStatus.Starting ? "Stop" : "Start camera";
             startButton.interactable = st != FaceTrackerStatus.Unsupported;
 
-            calibrateButton.interactable = running;
-            if (calibrating)
-            {
-                int pct = Mathf.RoundToInt(Mathf.Clamp01(estimator.CalibrationProgress) * 100f);
-                if (pct != lastCalibPercent)
-                {
-                    lastCalibPercent = pct;
-                    calibrateText.text = "Look at the dot… " + pct + "%";
-                }
-            }
-            else
-            {
-                lastCalibPercent = -1;
-                calibrateText.text = "Calibrate";
-            }
+            calibrateButton.interactable = running || calibrating;
+            calibrateText.text = calibrating ? "Cancel" : "Calibrate";
+
+            headCalButton.interactable = running && estimator.IsCalibrated && !estimator.IsCalibrating;
 
             previewText.text = previewVisible ? "Preview: ON" : "Preview: OFF";
         }
@@ -218,8 +357,14 @@ namespace VestibularGame.FaceTracking.DebugUI
 
         void OnCalibrateClicked()
         {
-            if (controller.Estimator.IsCalibrating) controller.Estimator.CancelCalibration();
-            else controller.BeginCalibration();
+            var estimator = controller.Estimator;
+            if (estimator.IsCalibrating || estimator.IsHeadCalibrating) controller.CancelCalibration();
+            else controller.CalibrateFull();
+        }
+
+        void OnHeadCalClicked()
+        {
+            controller.BeginHeadCalibration();
         }
 
         void OnPreviewClicked()
@@ -267,6 +412,15 @@ namespace VestibularGame.FaceTracking.DebugUI
             centerDot = NewImage("CenterTarget", field, circleSprite, Color.white);
             centerDotRect = centerDot.rectTransform;
             centerDotRect.sizeDelta = new Vector2(CenterDotSize, CenterDotSize);
+
+            // Calibration prompt, centred horizontally just below the dot (which pulses up to ~2.4x while calibrating).
+            promptLabel = NewText("CalibrationPrompt", field, 40, TextAnchor.UpperCenter, ColorWarn);
+            SetAnchored(promptLabel.rectTransform, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, -80f), new Vector2(-96f, 170f));
+            promptLabel.rectTransform.pivot = new Vector2(0.5f, 1f);
+            promptLabel.fontStyle = FontStyle.Bold;
+            promptLabel.resizeTextForBestFit = true;
+            promptLabel.resizeTextMinSize = 24;
+            promptLabel.resizeTextMaxSize = 40;
             cursor = NewImage("GazeCursor", field, circleSprite, ColorIdle);
             cursorRect = cursor.rectTransform;
             cursorRect.sizeDelta = new Vector2(CursorSize, CursorSize);
@@ -288,6 +442,32 @@ namespace VestibularGame.FaceTracking.DebugUI
             landmarkGraphic.AddHighlightRange(468, 477);
             landmarkGraphic.color = new Color(0.5f, 0.5f, 0.5f, 0f);
 
+            // Head-vs-eye scatter plot, right below the landmark panel (top-right column: 24 + 315 + 16 = 355 from the top).
+            var plotPanel = NewImage("ScatterPanel", safeRoot, null, new Color(0f, 0f, 0f, 0.6f));
+            var plotPanelRect = plotPanel.rectTransform;
+            SetAnchored(plotPanelRect, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-24f, -355f), new Vector2(420f, 420f));
+
+            var plotTitle = NewText("ScatterTitle", plotPanelRect, 22, TextAnchor.MiddleCenter, new Color(1f, 1f, 1f, 0.8f));
+            SetAnchored(plotTitle.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -2f), new Vector2(0f, 32f));
+            plotTitle.rectTransform.pivot = new Vector2(0.5f, 1f);
+            plotTitle.text = "Gaze error vs head (fixate centre)";
+
+            // 380x380 plot area inside the 420x420 panel (x spans ±30°, y spans ±15°); the bright horizontal axis is the ideal line.
+            var plotRect = NewRect("ScatterPlot", plotPanelRect);
+            Stretch(plotRect);
+            plotRect.offsetMin = new Vector2(20f, 4f);
+            plotRect.offsetMax = new Vector2(-20f, -36f);
+            scatterPlot = plotRect.gameObject.AddComponent<ScatterPlotGraphic>();
+            scatterPlot.raycastTarget = false;
+
+            fitLabel = NewText("ScatterFit", safeRoot, 22, TextAnchor.UpperLeft, Color.white);
+            SetAnchored(fitLabel.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-24f, -781f), new Vector2(420f, 112f));
+            fitLabel.verticalOverflow = VerticalWrapMode.Overflow;
+
+            // Full-width button across the 420-wide column, right edge at -24.
+            var clearButton = NewButton("ClearPlotButton", safeRoot, "Clear plot", OnClearPlotClicked, out _);
+            SetAnchored((RectTransform)clearButton.transform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-24f, -901f), new Vector2(420f, 64f));
+
             // Readout, top-left.
             readout = NewText("Readout", safeRoot, 28, TextAnchor.UpperLeft, Color.white);
             SetAnchored(readout.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -24f), new Vector2(560f, 500f));
@@ -298,11 +478,12 @@ namespace VestibularGame.FaceTracking.DebugUI
             SetAnchored(row, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 24f), new Vector2(-48f, 120f));
             row.pivot = new Vector2(0.5f, 0f);
             var layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 16f;
+            layout.spacing = 12f; // four buttons across the ~1032-wide row (~245 each)
             layout.childControlWidth = layout.childControlHeight = true;
             layout.childForceExpandWidth = layout.childForceExpandHeight = true;
             startButton = NewButton("StartButton", row, "Start camera", OnStartClicked, out startText);
             calibrateButton = NewButton("CalibrateButton", row, "Calibrate", OnCalibrateClicked, out calibrateText);
+            headCalButton = NewButton("HeadCalButton", row, "Head cal", OnHeadCalClicked, out headCalText);
             previewButton = NewButton("PreviewButton", row, "Preview", OnPreviewClicked, out previewText);
 
             hintLabel = NewText("MockHint", safeRoot, 24, TextAnchor.LowerCenter, new Color(1f, 1f, 1f, 0.7f));

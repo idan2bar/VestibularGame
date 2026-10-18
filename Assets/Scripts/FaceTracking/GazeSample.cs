@@ -16,15 +16,15 @@ namespace VestibularGame.FaceTracking
         public float HeadPitch;
         public float HeadRoll;
 
-        // Eye-in-head rotation, averaged over both eyes (approximate, uncalibrated).
+        // Eye-in-head rotation, averaged over both eyes (approximate, uncalibrated, with the estimator's yaw/pitch gains applied).
         public float EyeYaw;
         public float EyePitch;
 
-        // Combined gaze relative to the calibrated screen center (zero when uncalibrated baseline is unknown).
+        // Gaze angles relative to the calibrated centre.
         public float GazeYaw;
         public float GazePitch;
 
-        /// <summary>Angular distance of the gaze from the calibrated center.</summary>
+        /// <summary>Angular distance of the gaze from the calibrated centre.</summary>
         public float DeviationDeg;
 
         /// <summary>Hysteresis-filtered "looking at the center" state.</summary>
