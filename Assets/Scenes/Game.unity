@@ -1213,6 +1213,86 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
+--- !u!1001 &810656892
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1223807264}
+    m_Modifications:
+    - target: {fileID: 3813548249848488842, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3813548249848488842, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3813548249848488842, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3813548249848488842, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3813548249848488842, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3813548249848488842, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3813548249848488842, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3813548249848488842, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3813548249848488842, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3813548249848488842, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6612358217746935492, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      propertyPath: m_Name
+      value: Star
+      objectReference: {fileID: 0}
+    - target: {fileID: 7157629739297831360, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7157629739297831360, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7157629739297831360, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7344657933686629421, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 952367097}
+    - targetCorrespondingSourceObject: {fileID: 1127585398915941666, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1442483051}
+  m_SourcePrefab: {fileID: 100100000, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+--- !u!4 &810656893 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3813548249848488842, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+  m_PrefabInstance: {fileID: 810656892}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &898956242
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1227,6 +1307,29 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.InputActionReference
   m_Asset: {fileID: 717120380}
   m_ActionId: 15cef263-9014-4fd5-94d9-4e4a6234a6ef
+--- !u!1 &952367093 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7344657933686629421, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+  m_PrefabInstance: {fileID: 810656892}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &952367096 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 5077830164005065551, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+  m_PrefabInstance: {fileID: 810656892}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &952367097
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 952367093}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91b8cf430fa551d499867b50ecbb167d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: '::'
+  animator: {fileID: 952367096}
 --- !u!114 &954615257
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1277,10 +1380,58 @@ MonoBehaviour:
   startEnabled: 0
   onLookStarted:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 952367097}
+        m_TargetAssemblyTypeName: animationchange, Assembly-CSharp
+        m_MethodName: PlayHappyAnim
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 1442483051}
+        m_TargetAssemblyTypeName: animationchange, Assembly-CSharp
+        m_MethodName: PlayHappyAnim
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   onLookStopped:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 952367097}
+        m_TargetAssemblyTypeName: animationchange, Assembly-CSharp
+        m_MethodName: playSadAnim
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 1442483051}
+        m_TargetAssemblyTypeName: animationchange, Assembly-CSharp
+        m_MethodName: playSadAnim
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1001517128
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1605,7 +1756,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1223807264
 Transform:
   m_ObjectHideFlags: 0
@@ -1620,6 +1771,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 355078875}
+  - {fileID: 810656893}
   m_Father: {fileID: 1113585501}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1320410754
@@ -1775,6 +1927,29 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
+--- !u!1 &1442483047 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1127585398915941666, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+  m_PrefabInstance: {fileID: 810656892}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &1442483050 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 8769118311117489381, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+  m_PrefabInstance: {fileID: 810656892}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1442483051
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1442483047}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91b8cf430fa551d499867b50ecbb167d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::animationchange
+  animator: {fileID: 1442483050}
 --- !u!114 &1703112238
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1921,6 +2096,7 @@ GameObject:
   - component: {fileID: 1957995598}
   - component: {fileID: 1957995597}
   - component: {fileID: 1957995596}
+  - component: {fileID: 1957995599}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1996,12 +2172,56 @@ Transform:
   m_GameObject: {fileID: 1957995595}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1957995599
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1957995595}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 0
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
 --- !u!1 &1963793204
 GameObject:
   m_ObjectHideFlags: 0
