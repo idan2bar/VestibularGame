@@ -1,0 +1,21 @@
+{
+    "name": "VestibularGame.Game.Editor",
+    "rootNamespace": "VestibularGame.Game.Editor",
+    "references": [
+        "VestibularGame.Game",
+        "VestibularGame.FaceTracking",
+        "UnityEngine.UI",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
