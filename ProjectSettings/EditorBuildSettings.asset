@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/Game.unity
+    guid: b00b65a071330d64ab91b9f25cebefc2
+  - enabled: 1
     path: Assets/Scenes/FaceTrackingDebug.unity
     guid: 0d9a4d667deae5142940fdd5a10c7011
   - enabled: 1
