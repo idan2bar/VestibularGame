@@ -10,7 +10,9 @@ namespace VestibularGame.Game
     [DisallowMultipleComponent]
     public sealed class StreakRewards : MonoBehaviour
     {
-        const float PunchDuration = 0.3f;
+        const float MaxGrowDt = 0.1f;
+        const float GrowStep = 1f / 120f;
+        const float MinScale = 0.2f;
         const double ScheduleDelay = 0.1;
 
         [SerializeField, Tooltip("Session to listen to. Found automatically if left empty.")]
@@ -21,10 +23,16 @@ namespace VestibularGame.Game
         Transform growTarget;
         [SerializeField, Tooltip("Extra scale (fraction of the base scale) gained per level.")]
         float growPerLevel = 0.15f;
-        [SerializeField, Tooltip("Exponential smoothing speed toward the target scale (unscaled time).")]
-        float growSpeed = 6f;
-        [SerializeField, Tooltip("Extra scale added on each level up that decays over about 0.3 s.")]
-        float levelUpPunch = 0.12f;
+        [SerializeField, Tooltip("Spring oscillation frequency in Hz.")]
+        float springFrequency = 3f;
+        [SerializeField, Range(0.05f, 1f), Tooltip("Damping ratio of the grow spring. Lower means more bounce; 1 means no overshoot.")]
+        float springDamping = 0.3f;
+        [SerializeField, Range(0.05f, 1f), Tooltip("Damping ratio used while shrinking back after a reset, so the return is soft.")]
+        float resetDamping = 0.6f;
+        [SerializeField, Tooltip("Extra spring velocity (scale fraction per second) added on each level up, for the pop.")]
+        float levelUpKick = 1.2f;
+        [SerializeField, Tooltip("Jelly deformation driven by the spring velocity. 0 turns it off.")]
+        float squashStretch = 0.06f;
 
         [Header("Particles")]
         [SerializeField, Tooltip("Played on every level up.")]
@@ -56,7 +64,8 @@ namespace VestibularGame.Game
         bool baseCaptured;
         int level;
         float growFactor;
-        float punchTimer;
+        float growVelocity;
+        bool shrinking;
         bool musicActive;
         bool musicEnding;
         bool subscribed;
@@ -70,7 +79,8 @@ namespace VestibularGame.Game
             }
             level = 0;
             growFactor = 0f;
-            punchTimer = 0f;
+            growVelocity = 0f;
+            shrinking = false;
 
             if (session == null)
                 session = FindAnyObjectByType<GameSession>();
@@ -122,17 +132,31 @@ namespace VestibularGame.Game
                 return;
 
             float goal = growPerLevel * level;
-            growFactor += (goal - growFactor) * (1f - Mathf.Exp(-growSpeed * dt));
+            float omega = 2f * Mathf.PI * springFrequency;
+            float zeta = shrinking ? resetDamping : springDamping;
+            float stiffness = omega * omega;
+            float damping = 2f * zeta * omega;
 
-            float punch = 0f;
-            if (punchTimer > 0f)
+            float remaining = Mathf.Min(dt, MaxGrowDt);
+            while (remaining > 0f)
             {
-                punchTimer = Mathf.Max(0f, punchTimer - dt);
-                float k = punchTimer / PunchDuration;
-                punch = levelUpPunch * k * k;
+                float h = Mathf.Min(remaining, GrowStep);
+                remaining -= h;
+                float a = stiffness * (goal - growFactor) - damping * growVelocity;
+                growVelocity += a * h;
+                growFactor += growVelocity * h;
             }
 
-            growTarget.localScale = baseScale * (1f + growFactor + punch);
+            if (growFactor < MinScale - 1f)
+            {
+                growFactor = MinScale - 1f;
+                if (growVelocity < 0f)
+                    growVelocity = 0f;
+            }
+
+            float s = Mathf.Clamp(growVelocity * squashStretch, -0.25f, 0.25f);
+            Vector3 k = baseScale * (1f + growFactor);
+            growTarget.localScale = new Vector3(k.x * (1f + s), k.y * (1f - s * 0.8f), k.z);
         }
 
         void UpdateMusic(float dt)
@@ -203,7 +227,7 @@ namespace VestibularGame.Game
         {
             level = 0;
             growFactor = 0f;
-            punchTimer = 0f;
+            growVelocity = 0f;
             StopLoopParticles();
             StartMusic();
         }
@@ -211,7 +235,8 @@ namespace VestibularGame.Game
         void OnLevelReached(int newLevel)
         {
             level = newLevel;
-            punchTimer = levelUpPunch > 0f ? PunchDuration : 0f;
+            growVelocity += levelUpKick;
+            shrinking = false;
 
             if (burstOnLevel != null)
             {
@@ -238,7 +263,7 @@ namespace VestibularGame.Game
         void OnStreakReset()
         {
             level = 0;
-            punchTimer = 0f;
+            shrinking = true;
             StopLoopParticles();
 
             if (sfx != null && resetClip != null)
@@ -250,6 +275,7 @@ namespace VestibularGame.Game
         void OnSessionEnded(SessionStats stats)
         {
             level = 0;
+            shrinking = true;
             StopLoopParticles();
             if (musicActive)
                 musicEnding = true;
