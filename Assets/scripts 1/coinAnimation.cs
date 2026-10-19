@@ -19,18 +19,14 @@ public class coinAnimation : MonoBehaviour
     [SerializeField] float flyDuration = 0.6f;    // time to fly to the target
     [SerializeField] float flyStagger = 0f;       // 0 = all return together
     [SerializeField] bool evenCircle = true; // true = perfect ring, false = random scatter
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-            SpawnCoins();
-    }
+ 
 
     public void OnCoinButtonClick()
     {
         SpawnCoins();
     }
 
-    void SpawnCoins()
+   public void SpawnCoins()
     {
         // The camera's right and up directions = a flat surface facing the camera
         Transform cam = Camera.main.transform;

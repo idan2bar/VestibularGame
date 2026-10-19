@@ -1213,6 +1213,11 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
+--- !u!1 &801178013 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6612358217746935492, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+  m_PrefabInstance: {fileID: 810656892}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &810656892
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1281,6 +1286,9 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6612358217746935492, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 810656894}
     - targetCorrespondingSourceObject: {fileID: 7344657933686629421, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 952367097}
@@ -1293,6 +1301,29 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3813548249848488842, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
   m_PrefabInstance: {fileID: 810656892}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &810656894
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 801178013}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4421f32f403d2e469bd7158141bdb44, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ChengeScaling
+--- !u!114 &864448490 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2480786665106264840, guid: ea4ead8c9c7a06847afcbbea2e68f06b, type: 3}
+  m_PrefabInstance: {fileID: 810656892}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2e3d02585227024492c0c27ff3b5d0f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &898956242
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1405,6 +1436,30 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 810656894}
+        m_TargetAssemblyTypeName: ChengeScaling, Assembly-CSharp
+        m_MethodName: scaleup
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 864448490}
+        m_TargetAssemblyTypeName: coinAnimation, Assembly-CSharp
+        m_MethodName: SpawnCoins
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   onLookStopped:
     m_PersistentCalls:
       m_Calls:
@@ -1423,6 +1478,18 @@ MonoBehaviour:
       - m_Target: {fileID: 1442483051}
         m_TargetAssemblyTypeName: animationchange, Assembly-CSharp
         m_MethodName: playSadAnim
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 810656894}
+        m_TargetAssemblyTypeName: ChengeScaling, Assembly-CSharp
+        m_MethodName: scaledown
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
