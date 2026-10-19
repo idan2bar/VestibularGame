@@ -1,15 +1,16 @@
 
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class ChengeScaling : MonoBehaviour
 {
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.UpArrow))
+        if (Keyboard.current != null && Keyboard.current.upArrowKey.wasPressedThisFrame)
         {
             scaleup();
         }
-        if (Input.GetKeyDown(KeyCode.DownArrow))
+        if (Keyboard.current != null && Keyboard.current.downArrowKey.wasPressedThisFrame)
         {
             scaledown();
         }
